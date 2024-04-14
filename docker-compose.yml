@@ -1,0 +1,68 @@
+version: "3"
+
+services:
+  db:
+    image: postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+  app:
+    container_name: code
+    build: .
+    ports:
+      - "8888:8888"
+    volumes:
+      - .:/code
+    restart: always
+
+  worker1:
+    container_name: worker1
+    build: .
+    command: celery -A core worker -B -l info -Q queue1
+    volumes:
+      - .:/code
+    depends_on:
+      - app
+      - rabbitmq
+
+  worker2:
+    container_name: worker2
+    build: .
+    command: celery -A core worker -l info -Q queue2
+    volumes:
+      - .:/code
+    depends_on:
+      - app
+      - rabbitmq
+
+  worker3:
+    container_name: worker3
+    build: .
+    command: celery -A core worker -B -l info
+    volumes:
+      - .:/code
+    depends_on:
+      - app
+      - rabbitmq
+
+  rabbitmq:
+    image: "rabbitmq"
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    depends_on:
+      - app
+
+  flower:
+    container_name: flower
+    build: .
+    command: celery -A core flower --port=5555
+    volumes:
+      - .:/code
+    ports:
+      - "5556:5555"
+    depends_on:
+      - rabbitmq
