@@ -13,11 +13,14 @@ DEBUG = os.getenv("DEBUG")
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
+    # my apps
+    "users",
+    'items',
+    # external apps
     "knox",
     "drf_spectacular",
-    "users",
     "rest_framework.authtoken",
-
+    # django
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
