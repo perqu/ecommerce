@@ -14,9 +14,12 @@ ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
     # my apps
+    'chat',
     "users",
     'items',
     # external apps
+    'daphne',
+    'channels',
     "knox",
     "drf_spectacular",
     "rest_framework.authtoken",
@@ -28,6 +31,16 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 ]
+
+ASGI_APPLICATION = "core.asgi.application"
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("redis", 6379)],
+        },
+    },
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

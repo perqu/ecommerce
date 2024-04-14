@@ -9,6 +9,7 @@ urlpatterns = [
     # apps
     path('users', include('users.urls')),
     path('items', include('items.urls')),
+    path('chat', include('chat.urls')),
     # test
     path('', index, name='index'),
     path('button1', view1, name='view1'),

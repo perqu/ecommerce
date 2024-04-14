@@ -66,3 +66,9 @@ services:
       - "5556:5555"
     depends_on:
       - rabbitmq
+
+  redis:
+    image: "redis:7"
+    container_name: redis
+    ports:
+      - "6379:6379"
