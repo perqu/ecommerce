@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .models import User
-from .serializers import AuthSerializer, UserGetListSerializer, UserGetSerializer, UserPatchSerializer, UserPostSerializer, ChangePasswordSerializer
+from .serializers import AuthSerializer, UserListSerializer, UserDetailSerializer, UserCreateSerializer, UserEditSerializer, ChangePasswordSerializer
 from utils.permissions import HasGroupPermission
 from rest_framework.permissions import AllowAny
 from drf_spectacular.utils import extend_schema, OpenApiParameter
@@ -12,6 +12,7 @@ from knox.views import LoginView as KnoxLoginView
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from django.contrib.auth import login
 from utils.throttle import LoginThrottle
+from django.shortcuts import get_object_or_404
 
 from utils.scheme import KnoxTokenScheme
 class LoginAPIView(KnoxLoginView):
@@ -64,10 +65,10 @@ class UserListView(APIView):
         paginator = self.pagination_class()
         paginated_users = paginator.paginate_queryset(users, request)
 
-        serializer = UserGetListSerializer(paginated_users, many=True)
+        serializer = UserListSerializer(paginated_users, many=True)
         return paginator.get_paginated_response(serializer.data)
 
-    @extend_schema(request=UserPostSerializer)
+    @extend_schema(request=UserCreateSerializer)
     def post(self, request):
         """
         Create a new user.
@@ -79,7 +80,7 @@ class UserListView(APIView):
         - last_name: The last name of the user (string).
         - password: The password of the user (string).
         """
-        serializer = UserPostSerializer(data=request.data)
+        serializer = UserCreateSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -92,20 +93,6 @@ class UserDetailView(APIView):
     permission_classes = [HasGroupPermission]
     required_groups = ['IT']
 
-    def get_object(self, uuid):
-        """
-        Retrieve an user object by its UUID.
-
-        parameters:
-         - uuid: The UUID of the user to retrieve (string).
-
-        return: User object if found, None otherwise.
-        """
-        try:
-            return User.objects.get(uuid=uuid)
-        except User.DoesNotExist:
-            return None
-
     def get(self, request, uuid):
         """
         Retrieve details of an user by UUID.
@@ -113,13 +100,11 @@ class UserDetailView(APIView):
         Required parameter in the URL:
         - uuid: The UUID of the user to retrieve (string).
         """
-        user = self.get_object(uuid)
-        if user:
-            serializer = UserGetSerializer(user)
-            return Response(serializer.data)
-        return Response(status=status.HTTP_404_NOT_FOUND)
+        user = get_object_or_404(User, uuid=uuid)
+        serializer = UserDetailSerializer(user)
+        return Response(serializer.data)
 
-    @extend_schema(request=UserPatchSerializer)
+    @extend_schema(request=UserEditSerializer)
     def patch(self, request, uuid):
         """
         Update an user instance partially.
@@ -132,14 +117,12 @@ class UserDetailView(APIView):
         - email_verified: The status of email verification (boolean).
         - profile: The profile information of the user (object).
         """
-        user = self.get_object(uuid)
-        if user:
-            serializer = UserPatchSerializer(user, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        return Response(status=status.HTTP_404_NOT_FOUND)
+        user = get_object_or_404(User, uuid=uuid)
+        serializer = UserEditSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, uuid):
         """
@@ -148,19 +131,30 @@ class UserDetailView(APIView):
         Required parameter in the URL:
         - uuid: The UUID of the user to delete (string).
         """
-        user = self.get_object(uuid)
-        if user:
-            user.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response(status=status.HTTP_404_NOT_FOUND)
+        user = get_object_or_404(User, uuid=uuid)
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
     
-class ChangePasswordAPIView(APIView):
+class AccountView(APIView):
+    """
+    A view to display user data.
+    """
+
+    def get(self, request):
+        """
+        Retrieve details of an user by UUID.
+
+        Required parameter in the URL:
+        - uuid: The UUID of the user to retrieve (string).
+        """
+        user = get_object_or_404(User, uuid=request.user.uuid)
+        serializer = UserDetailSerializer(user)
+        return Response(serializer.data)
+    
+class ChangePasswordView(APIView):
     """
     A view to handle changing user password.
     """
-    permission_classes = [HasGroupPermission]
-    required_groups = ['IT']
-
     @extend_schema(
         request=ChangePasswordSerializer,
     )

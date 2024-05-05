@@ -37,7 +37,6 @@ class UserProfile(models.Model):
     
 class User(AbstractUser):
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    password = models.CharField(max_length=128, blank=False)
     email_verified = models.BooleanField(default=False)
     profile = models.OneToOneField(UserProfile, on_delete=models.CASCADE, related_name='user_profile', null=True, blank=True, to_field='uuid')
 

@@ -22,7 +22,7 @@ INSTALLED_APPS = [
     'channels',
     "knox",
     "drf_spectacular",
-    "rest_framework.authtoken",
+    #"rest_framework.authtoken",
     # django
     'django.contrib.admin',
     'django.contrib.auth',
