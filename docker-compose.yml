@@ -15,6 +15,8 @@ services:
       - "8888:8888"
     volumes:
       - .:/code
+    env_file:
+      - .env
     restart: always
 
   worker1:

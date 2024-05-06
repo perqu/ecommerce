@@ -1,20 +1,21 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import User
-from .serializers import AuthSerializer, UserListSerializer, UserDetailSerializer, UserCreateSerializer, UserEditSerializer, ChangePasswordSerializer
-from utils.permissions import HasGroupPermission
 from rest_framework.permissions import AllowAny
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
-from utils.paginators import SmallResultsSetPagination
 from knox.views import LoginView as KnoxLoginView
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from django.contrib.auth import login
-from utils.throttle import LoginThrottle
 from django.shortcuts import get_object_or_404
 
+from utils.permissions import HasGroupPermission
+from utils.throttle import LoginThrottle
+from utils.paginators import SmallResultsSetPagination
+from .models import User
+from .serializers import AuthSerializer, UserListSerializer, UserDetailSerializer, UserCreateSerializer, UserEditSerializer, ChangePasswordSerializer
 from utils.scheme import KnoxTokenScheme
+
 class LoginAPIView(KnoxLoginView):
     """
     A view to handle user authentication and token generation.
@@ -39,7 +40,7 @@ class LoginAPIView(KnoxLoginView):
         login(request, user)
         return super(LoginAPIView, self).post(request, format=None)
 
-class UserListView(APIView):
+class UserListCreateView(APIView):
     """
     A view to list all users or create a new user.
     """
@@ -76,9 +77,20 @@ class UserListView(APIView):
         Required parameters in the request:
         - username: The username of the user (string).
         - email: The email of the user (string).
+        - password: The password of the user (string).
+
+        Optional parameters:
         - first_name: The first name of the user (string).
         - last_name: The last name of the user (string).
-        - password: The password of the user (string).
+        - is_superuser: Indicates if the user is a superuser (boolean).
+        - is_staff: Indicates if the user is staff (boolean).
+        - is_active: Indicates if the user is active (boolean).
+        - email_verified: Indicates if the email of the user is verified (boolean).
+        - last_login: The date and time of the last login (string, format: "YYYY-MM-DDThh:mm:ss.sssZ").
+        - date_joined: The date and time when the user joined (string, format: "YYYY-MM-DDThh:mm:ss.sssZ").
+        - profile: The profile information of the user (string, UUID format).
+        - groups: The groups to which the user belongs (list of integers).
+        - user_permissions: The permissions of the user (list of integers).
         """
         serializer = UserCreateSerializer(data=request.data)
         if serializer.is_valid():
@@ -102,20 +114,27 @@ class UserDetailView(APIView):
         """
         user = get_object_or_404(User, uuid=uuid)
         serializer = UserDetailSerializer(user)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @extend_schema(request=UserEditSerializer)
     def patch(self, request, uuid):
         """
-        Update an user instance partially.
+        Edit user.
 
         Possible parameters in the request:
         - username: The username of the user (string).
         - email: The email of the user (string).
         - first_name: The first name of the user (string).
         - last_name: The last name of the user (string).
-        - email_verified: The status of email verification (boolean).
-        - profile: The profile information of the user (object).
+        - is_superuser: Indicates if the user is a superuser (boolean).
+        - is_staff: Indicates if the user is staff (boolean).
+        - is_active: Indicates if the user is active (boolean).
+        - email_verified: Indicates if the email of the user is verified (boolean).
+        - last_login: The date and time of the last login (string, format: "YYYY-MM-DDThh:mm:ss.sssZ").
+        - date_joined: The date and time when the user joined (string, format: "YYYY-MM-DDThh:mm:ss.sssZ").
+        - profile: The profile information of the user (string, UUID format).
+        - groups: The groups to which the user belongs (list of integers).
+        - user_permissions: The permissions of the user (list of integers).
         """
         user = get_object_or_404(User, uuid=uuid)
         serializer = UserEditSerializer(user, data=request.data, partial=True)
@@ -135,21 +154,18 @@ class UserDetailView(APIView):
         user.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     
-class AccountView(APIView):
+class UserAccountView(APIView):
     """
     A view to display user data.
     """
 
     def get(self, request):
         """
-        Retrieve details of an user by UUID.
-
-        Required parameter in the URL:
-        - uuid: The UUID of the user to retrieve (string).
+        Retrieve details of your account.
         """
         user = get_object_or_404(User, uuid=request.user.uuid)
         serializer = UserDetailSerializer(user)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
     
 class ChangePasswordView(APIView):
     """
@@ -169,5 +185,5 @@ class ChangePasswordView(APIView):
         serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
-            return Response({'message': 'Password changed successfully'}, status=status.HTTP_200_OK)
+            return Response(status=status.HTTP_204_NO_CONTENT)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
